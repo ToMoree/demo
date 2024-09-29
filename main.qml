@@ -29,6 +29,7 @@ Window {
         anchors.horizontalCenter: idRec.horizontalCenter
         anchors.bottom: idRec.bottom
         anchors.bottomMargin: 10
+        text: "check update"
         onClicked: {
         }
     }
