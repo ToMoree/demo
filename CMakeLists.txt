@@ -15,29 +15,34 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 #设置可执行文件输出目录/这个设置要靠前, 不然没用
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE})
 
-
-# QtCreator supports the following variables for Android, which are identical to qmake Android variables.
-# Check https://doc.qt.io/qt/deployment-android.html for more information.
-# They need to be set before the find_package(...) calls below.
-
-#if(ANDROID)
-#    set(ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android")
-#    if (ANDROID_ABI STREQUAL "armeabi-v7a")
-#        set(ANDROID_EXTRA_LIBS
-#            ${CMAKE_CURRENT_SOURCE_DIR}/path/to/libcrypto.so
-#            ${CMAKE_CURRENT_SOURCE_DIR}/path/to/libssl.so)
-#    endif()
-#endif()
-
-#--------------------
-
 find_package(QT NAMES Qt6 Qt5 COMPONENTS Core Quick REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Quick REQUIRED)
+
+#通过git获取版本信息
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/.cmake/)
+include(GetGitRevisionDescription)
+
+#如果是Windows平台，则生成rc文件，还有inno setup脚本文件
+set(EXAMPLE_VERSION_RC_PATH "")
+if (WIN32)
+    set(EXAMPLE_VERSION_RC_PATH ${CMAKE_CURRENT_BINARY_DIR}/version_${PROJECT_NAME}.rc)
+    configure_file(
+            ${CMAKE_SOURCE_DIR}/.cmake/version_exe.rc.in
+            ${EXAMPLE_VERSION_RC_PATH}
+    )
+    configure_file(
+            ${CMAKE_SOURCE_DIR}/.cmake/InstallerScript.iss.in
+            ${CMAKE_SOURCE_DIR}/package/InstallerScript.iss
+    )
+endif ()
 
 set(PROJECT_SOURCES
         main.cpp
         qml.qrc
 )
+if (WIN32)
+    list(APPEND PROJECT_SOURCES ${EXAMPLE_VERSION_RC_PATH})
+endif ()
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(demo
@@ -85,6 +90,4 @@ if (CMAKE_BUILD_TYPE MATCHES "Release")
         )
     endif ()
 endif ()
-
-add_dependencies(Script-DeployRelease ${PROJECT_NAME} )
 
