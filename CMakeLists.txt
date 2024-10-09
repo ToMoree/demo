@@ -36,10 +36,15 @@ if (WIN32)
     )
 endif ()
 
-set(PROJECT_SOURCES
-        main.cpp
-        qml.qrc
-)
+#遍历所有Cpp文件
+file(GLOB_RECURSE CPP_FILES *.cpp *.h)
+foreach (filepath ${CPP_FILES})
+    string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}/" "" filename ${filepath})
+    list(APPEND PROJECT_SOURCES ${filename})
+endforeach (filepath)
+
+list(APPEND PROJECT_SOURCES qml.qrc)
+
 if (WIN32)
     list(APPEND PROJECT_SOURCES ${EXAMPLE_VERSION_RC_PATH})
 endif ()
@@ -90,4 +95,12 @@ if (CMAKE_BUILD_TYPE MATCHES "Release")
         )
     endif ()
 endif ()
+
+##生成版本信息头文件
+set(HEADER_FILE_VERSION_PATH ${CMAKE_SOURCE_DIR}/src/Version.h)
+configure_file(
+        ${CMAKE_SOURCE_DIR}/.cmake/Version.h.in
+        ${HEADER_FILE_VERSION_PATH}
+)
+
 

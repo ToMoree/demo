@@ -1,3 +1,4 @@
 *.user
 /bin
 /package
+src/Version.h
