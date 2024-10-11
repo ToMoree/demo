@@ -17,3 +17,8 @@ void UpdaterViewModel::checkForUpdates()
 {
     CALL_MODEL(UpdaterModel)->checkForUpdates();
 }
+
+void UpdaterViewModel::startDownload()
+{
+    CALL_MODEL(UpdaterModel)->startDownload();
+}
