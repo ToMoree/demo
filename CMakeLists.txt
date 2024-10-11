@@ -49,6 +49,7 @@ if (WIN32)
     list(APPEND PROJECT_SOURCES ${EXAMPLE_VERSION_RC_PATH})
 endif ()
 
+#添加可执行文件
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(demo
         ${PROJECT_SOURCES}
@@ -65,10 +66,41 @@ else()
     endif()
 endif()
 
-target_compile_definitions(demo
-  PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
+#target_compile_definitions(demo
+#  PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
 target_link_libraries(demo
   PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Quick)
+
+#头文件包含 代码可以直接include而不需要相对路径
+target_include_directories(${PROJECT_NAME} PRIVATE
+        ${CMAKE_SOURCE_DIR}/src/
+        ${CMAKE_SOURCE_DIR}/src/mainapp
+        ${CMAKE_SOURCE_DIR}/src/common
+        ${CMAKE_SOURCE_DIR}/src/mvvm/
+        ${CMAKE_SOURCE_DIR}/src/mvvm/mvvmcore
+)
+
+#添加预处理器宏定义
+#!宏定义赋值前后吧不要空格
+target_compile_definitions(${PROJECT_NAME}
+    PRIVATE
+    UPDATE_FROM_GIT=1
+)
+
+#复制程序运行所需要的动态库
+if (WIN32)
+    if (MSVC)
+        if (CMAKE_SIZEOF_VOID_P EQUAL 4)
+            file(GLOB_RECURSE 3RDPARTY_DLL_DIR ${CMAKE_SOURCE_DIR}/3rdparty/msvc/x86/*.dll)
+        elseif (CMAKE_SIZEOF_VOID_P EQUAL 8)
+            file(GLOB_RECURSE 3RDPARTY_DLL_DIR ${CMAKE_SOURCE_DIR}/3rdparty/msvc/x64/*.dll)
+        endif ()
+    elseif (MINGW)
+        file(GLOB_RECURSE 3RDPARTY_DLL_DIR ${CMAKE_SOURCE_DIR}/3rdparty/mingw/*.dll)
+    endif ()
+    file(COPY ${3RDPARTY_DLL_DIR} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+endif ()
+
 
 #添加部署脚本
 if (CMAKE_BUILD_TYPE MATCHES "Release")
@@ -97,9 +129,9 @@ if (CMAKE_BUILD_TYPE MATCHES "Release")
 endif ()
 
 ##生成版本信息头文件
-set(HEADER_FILE_VERSION_PATH ${CMAKE_SOURCE_DIR}/src/Version.h)
+set(HEADER_FILE_VERSION_PATH ${CMAKE_SOURCE_DIR}/src/version.h)
 configure_file(
-        ${CMAKE_SOURCE_DIR}/.cmake/Version.h.in
+        ${CMAKE_SOURCE_DIR}/.cmake/version.h.in
         ${HEADER_FILE_VERSION_PATH}
 )
 

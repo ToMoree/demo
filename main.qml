@@ -31,6 +31,7 @@ Window {
         anchors.bottomMargin: 10
         text: "check update"
         onClicked: {
+            UpdaterViewModel.checkForUpdates();
         }
     }
 }
