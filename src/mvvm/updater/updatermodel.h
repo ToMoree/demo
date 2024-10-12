@@ -17,6 +17,7 @@ public:
 
      void checkForUpdates();
      void startDownload();
+     void cancelDownload();
 
      QString url() const;
      void setUrl(const QString &url);
@@ -29,7 +30,6 @@ private slots:
      void metaDataChanged();
      void openDownload();
      void installUpdate();
-     void cancelDownload();
      void saveFile(qint64 received, qint64 total);
      void calculateSizes(qint64 received, qint64 total);
      void updateProgress(qint64 received, qint64 total);

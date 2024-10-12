@@ -43,6 +43,29 @@ Window {
             y: 263
             value: UpdaterViewModel.downloadProgress
         }
+
+        Text {
+            id: text1
+            x: 312
+            y: 190
+            width: 92
+            height: 26
+            color: "#ffffff"
+            text: UpdaterViewModel.progressStr
+            font.pixelSize: 12
+            horizontalAlignment: Text.AlignLeft
+            verticalAlignment: Text.AlignVCenter
+        }
+
+        Button {
+            id: button1
+            x: 392
+            y: 240
+            text: qsTr("cancel")
+            onClicked: {
+                UpdaterViewModel.cancelDownload()
+            }
+        }
     }
 
     Button{

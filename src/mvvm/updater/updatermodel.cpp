@@ -62,20 +62,20 @@ void UpdaterModel::startDownload()
 
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
 
- #if (QT_VERSION >= QT_VERSION_CHECK(5, 15, 0))
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 15, 0))
     /* 5s timeout */
     request.setTransferTimeout(5000);
- #endif
+#endif
 
     //necessary?
-    request.setRawHeader("User-Agent", APPLICATION_VERSION);
+    //request.setRawHeader("User-Agent", "aaa");
 
     m_reply = m_manager->get(request);
     m_startTime = QDateTime::currentDateTime().toSecsSinceEpoch();
 
     /* Ensure that downloads directory exists */
     if (!m_downloadDir.exists())
-       m_downloadDir.mkpath(".");
+        m_downloadDir.mkpath(".");
 
     /* Remove old downloads */
     QFile::remove(m_downloadDir.filePath(m_fileName));
@@ -112,31 +112,35 @@ void UpdaterModel::onCheckForUpdatesReply(QNetworkReply *reply)
     /* Check if we need to redirect */
     QUrl redirect = reply->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl();
     if (!redirect.isEmpty()){
-       setUrl(redirect.toString());
-       checkForUpdates();
-       return;
+        setUrl(redirect.toString());
+        checkForUpdates();
+        return;
     }
 
     /* There was a network error */
     if (reply->error() != QNetworkReply::NoError){
-       CALL_VIEWMODEL(UpdaterViewModel)->isUpdateAvailable(false);
-       //emit checkingFinished(url());
-       return;
+        CALL_VIEWMODEL(UpdaterViewModel)->isUpdateAvailable(false);
+        //emit checkingFinished(url());
+        return;
     }
 
     QJsonDocument document = QJsonDocument::fromJson(reply->readAll());
     /* JSON is invalid */
     if (document.isNull()){
-       CALL_VIEWMODEL(UpdaterViewModel)->isUpdateAvailable(false);
-       //emit checkingFinished(url());
-       return;
+        CALL_VIEWMODEL(UpdaterViewModel)->isUpdateAvailable(false);
+        //emit checkingFinished(url());
+        return;
     }
 
     QVariantMap gitRetMap = document.toVariant().toMap();
-    if(gitRetMap.value("tag_name").toString() != APPLICATION_VERSION){
+    //qDebug().noquote()<<"gitRetMap ==" <<document.toJson(QJsonDocument::Indented);
+    if(true/*gitRetMap.value("tag_name").toString() != APPLICATION_VERSION*/){
         CALL_VIEWMODEL(UpdaterViewModel)->newVersion(gitRetMap.value("tag_name").toString());
+        CALL_VIEWMODEL(UpdaterViewModel)->downloadVisible(true);
         QVariantList assets = gitRetMap.value("assets").toList();
+
         if(!assets.isEmpty()){
+            qDebug()<<"download url ==" <<assets.first().toMap().value("browser_download_url").toString();
             setDownloadUrl(assets.first().toMap().value("browser_download_url").toString());
         }
 
@@ -155,8 +159,9 @@ void UpdaterModel::finished()
 {
     //remove partial file if error
     if (m_reply->error() != QNetworkReply::NoError){
-       QFile::remove(m_downloadDir.filePath(m_fileName + PARTIAL_DOWN));
-       return;
+        qDebug()<<"download error";
+        QFile::remove(m_downloadDir.filePath(m_fileName + PARTIAL_DOWN));
+        return;
     }
 
     /* Rename file */
@@ -176,13 +181,13 @@ void UpdaterModel::metaDataChanged()
 {
     QVariant variant = m_reply->header(QNetworkRequest::ContentDispositionHeader);
     if (variant.isValid()){
-       QString contentDisposition = QByteArray::fromPercentEncoding(variant.toByteArray()).constData();
-       QRegularExpression regExp(R"(filename=(\S+))");
-       QRegularExpressionMatch match = regExp.match(contentDisposition);
-       if (match.hasMatch()){
-          m_fileName = match.captured(1);
-          qDebug()<<"metaDataChanged filename ===" <<m_fileName;
-       }
+        QString contentDisposition = QByteArray::fromPercentEncoding(variant.toByteArray()).constData();
+        QRegularExpression regExp(R"(filename=(\S+))");
+        QRegularExpressionMatch match = regExp.match(contentDisposition);
+        if (match.hasMatch()){
+            m_fileName = match.captured(1);
+            qDebug()<<"metaDataChanged filename ===" <<m_fileName;
+        }
     }
 }
 
@@ -198,7 +203,16 @@ void UpdaterModel::installUpdate()
 
 void UpdaterModel::cancelDownload()
 {
+    if (m_reply && !m_reply->isFinished()){
+        /*ask user whether to cancel*/
 
+        //if(true){
+        m_reply->abort();
+        //}
+    }else {
+        /*hide view*/
+        CALL_VIEWMODEL(UpdaterViewModel)->downloadVisible(false);
+    }
 }
 
 /**
@@ -213,16 +227,16 @@ void UpdaterModel::saveFile(qint64 received, qint64 total)
     QUrl url = m_reply->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl();
     setDownloadUrl(url.toString());
     if (!url.isEmpty()){
-       startDownload();
-       return;
+        startDownload();
+        return;
     }
 
     /* Save downloaded data to disk */
     QFile file(m_downloadDir.filePath(m_fileName + PARTIAL_DOWN));
     if (file.open(QIODevice::WriteOnly | QIODevice::Append))
     {
-       file.write(m_reply->readAll());
-       file.close();
+        file.write(m_reply->readAll());
+        file.close();
     }
 }
 
@@ -237,42 +251,45 @@ void UpdaterModel::calculateSizes(qint64 received, qint64 total)
     QString receivedSize;
 
     if (total < 1024)
-       totalSize = tr("%1 bytes").arg(total);
+        totalSize = tr("%1 bytes").arg(total);
 
     else if (total < 1048576)
-       totalSize = tr("%1 KB").arg(round(total / 1024));
+        totalSize = tr("%1 KB").arg(round(total / 1024));
 
     else
-       totalSize = tr("%1 MB").arg(round(total / 1048576));
+        totalSize = tr("%1 MB").arg(round(total / 1048576));
 
     if (received < 1024)
-       receivedSize = tr("%1 bytes").arg(received);
+        receivedSize = tr("%1 bytes").arg(received);
 
     else if (received < 1048576)
-       receivedSize = tr("%1 KB").arg(received / 1024);
+        receivedSize = tr("%1 KB").arg(received / 1024);
 
     else
-       receivedSize = tr("%1 MB").arg(received / 1048576);
+        receivedSize = tr("%1 MB").arg(received / 1048576);
 
-//    m_ui->downloadLabel->setText(tr("Downloading updates") + " (" + receivedSize + " " + tr("of") + " " + totalSize
-//                                 + ")");
+    qDebug()<<"downloading: " << receivedSize + " " + tr("of") + " " + totalSize;
+    CALL_VIEWMODEL(UpdaterViewModel)->progressStr(" (" + receivedSize + " " + tr("of") + " " + totalSize + ")");
+    //    m_ui->downloadLabel->setText(tr("Downloading updates") + " (" + receivedSize + " " + tr("of") + " " + totalSize
+    //                                 + ")");
 }
 
 void UpdaterModel::updateProgress(qint64 received, qint64 total)
 {
     if (total > 0){
-       CALL_VIEWMODEL(UpdaterViewModel)->downloadProgress(received / total);
+        CALL_VIEWMODEL(UpdaterViewModel)->downloadProgress(float(received / total));
+        qDebug()<<"progress ==" <<  CALL_VIEWMODEL(UpdaterViewModel)->downloadProgress();
 
-       calculateSizes(received, total);
-       calculateTimeRemaining(received, total);
-       saveFile(received, total);
+        calculateSizes(received, total);
+        calculateTimeRemaining(received, total);
+        saveFile(received, total);
 
     }else{
-//       m_ui->progressBar->setMinimum(0);
-//       m_ui->progressBar->setMaximum(0);
-//       m_ui->progressBar->setValue(-1);
-//       m_ui->downloadLabel->setText(tr("Downloading Updates") + "...");
-//       m_ui->timeLabel->setText(QString("%1: %2").arg(tr("Time Remaining")).arg(tr("Unknown")));
+        //       m_ui->progressBar->setMinimum(0);
+        //       m_ui->progressBar->setMaximum(0);
+        //       m_ui->progressBar->setValue(-1);
+        //       m_ui->downloadLabel->setText(tr("Downloading Updates") + "...");
+        //       m_ui->timeLabel->setText(QString("%1: %2").arg(tr("Time Remaining")).arg(tr("Unknown")));
     }
 }
 
@@ -290,41 +307,42 @@ void UpdaterModel::calculateTimeRemaining(qint64 received, qint64 total)
 
     if (difference > 0)
     {
-       QString timeString;
-       qreal timeRemaining = (total - received) / (received / difference);
+        QString timeString;
+        qreal timeRemaining = (total - received) / (received / difference);
 
-       if (timeRemaining > 7200)
-       {
-          timeRemaining /= 3600;
-          int hours = int(timeRemaining + 0.5);
+        if (timeRemaining > 7200)
+        {
+            timeRemaining /= 3600;
+            int hours = int(timeRemaining + 0.5);
 
-          if (hours > 1)
-             timeString = tr("about %1 hours").arg(hours);
-          else
-             timeString = tr("about one hour");
-       }
+            if (hours > 1)
+                timeString = tr("about %1 hours").arg(hours);
+            else
+                timeString = tr("about one hour");
+        }
 
-       else if (timeRemaining > 60)
-       {
-          timeRemaining /= 60;
-          int minutes = int(timeRemaining + 0.5);
+        else if (timeRemaining > 60)
+        {
+            timeRemaining /= 60;
+            int minutes = int(timeRemaining + 0.5);
 
-          if (minutes > 1)
-             timeString = tr("%1 minutes").arg(minutes);
-          else
-             timeString = tr("1 minute");
-       }
+            if (minutes > 1)
+                timeString = tr("%1 minutes").arg(minutes);
+            else
+                timeString = tr("1 minute");
+        }
 
-       else if (timeRemaining <= 60)
-       {
-          int seconds = int(timeRemaining + 0.5);
+        else if (timeRemaining <= 60)
+        {
+            int seconds = int(timeRemaining + 0.5);
 
-          if (seconds > 1)
-             timeString = tr("%1 seconds").arg(seconds);
-          else
-             timeString = tr("1 second");
-       }
+            if (seconds > 1)
+                timeString = tr("%1 seconds").arg(seconds);
+            else
+                timeString = tr("1 second");
+        }
 
-       //m_ui->timeLabel->setText(tr("Time remaining") + ": " + timeString);
+        qDebug()<<"time remain: " << timeString;
+        //m_ui->timeLabel->setText(tr("Time remaining") + ": " + timeString);
     }
 }

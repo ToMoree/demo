@@ -4,7 +4,10 @@
 UpdaterViewModel::UpdaterViewModel(QObject *parent)
     :QObject(parent)
 {
-
+    m_isUpdateAvailable = false;
+    m_newVersion = "";
+    m_downloadProgress = 0;
+    m_downloadVisible = false;
 }
 
 UpdaterViewModel *UpdaterViewModel::getInstance()
@@ -21,4 +24,9 @@ void UpdaterViewModel::checkForUpdates()
 void UpdaterViewModel::startDownload()
 {
     CALL_MODEL(UpdaterModel)->startDownload();
+}
+
+void UpdaterViewModel::cancelDownload()
+{
+    CALL_MODEL(UpdaterModel)->cancelDownload();
 }
