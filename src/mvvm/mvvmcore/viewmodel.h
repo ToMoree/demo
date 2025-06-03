@@ -4,6 +4,7 @@
 class Model;
 #define CALL_MODEL(CLASS_NAME) static_cast<CLASS_NAME *>(getModel())
 
+//common ViewModel
 class ViewModel
 {
 public:
